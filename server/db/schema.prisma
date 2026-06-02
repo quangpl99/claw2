@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id           String        @id @default(cuid())
+  name         String
+  apiKey       String        @unique
+  webhookUrl   String?
+  platform     String?
+  notificationsEnabled Boolean @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  errors       ErrorGroup[]
+}
+
+model ErrorGroup {
+  id            String       @id @default(cuid())
+  projectId     String
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type          String
+  message       String
+  file          String?
+  line          Int?
+  resolved      Boolean      @default(false)
+  snoozedUntil  DateTime?
+  aiExplanation String?
+  aiRequestedAt DateTime?
+  resolvedAt    DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  occurrences   Occurrence[]
+
+  @@index([projectId, resolved])
+  @@index([projectId, createdAt])
+}
+
+model Occurrence {
+  id         String     @id @default(cuid())
+  groupId    String
+  group      ErrorGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  timestamp  DateTime
+  stack      String
+  metadata   String     // JSON string
+  createdAt  DateTime   @default(now())
+
+  @@index([groupId, timestamp])
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  projectId String
+  createdAt DateTime @default(now())
+  lastUsedAt DateTime?
+}
